@@ -13,7 +13,14 @@ const COLOR_MAP_SIZE = 256;
 const COLOR_STEP = 0x33;
 
 var memory: [MEMORY_SIZE]u8 = undefined;
+
 const color_map: [COLOR_MAP_SIZE]rl.Color = initColorMap();
+const keys: [16]rl.KeyboardKey = .{
+    .x,    .one, .two, .three,
+    .q,    .w,   .e,   .a,
+    .s,    .d,   .z,   .c,
+    .four, .r,   .f,   .v,
+};
 
 var frame_buffer: rl.RenderTexture2D = undefined;
 
@@ -80,9 +87,10 @@ pub fn main() !void {
     try init();
     defer deinit();
 
-    try loadRom("roms/Sprites.BytePusher");
+    try loadRom("roms/KeyboardTest.BytePusher");
 
     while (!rl.windowShouldClose()) {
+        updateKeysState();
         updateFrame();
         renderFrame();
 
@@ -94,6 +102,18 @@ pub fn main() !void {
 
         rl.drawTexturePro(frame_buffer.texture, src, dest, .init(0, 0), 0, .white);
     }
+}
+
+fn updateKeysState() void {
+    var buff: u16 = 0x0000;
+
+    for (keys, 0..) |key, i| {
+        if (rl.isKeyDown(key)) {
+            buff |= @as(u16, 1) << @intCast(i);
+        }
+    }
+
+    std.mem.writeInt(u16, memory[0..2], buff, .big);
 }
 
 fn updateFrame() void {
