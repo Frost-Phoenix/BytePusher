@@ -1,6 +1,8 @@
 const rl = @import("raylib");
 const std = @import("std");
 
+const BUILD_MODE = @import("builtin").mode;
+
 const bp = @import("bytepusher.zig");
 const SCREEN_SIZE = bp.SCREEN_SIZE;
 
@@ -10,23 +12,58 @@ const FPS = 60;
 const SCALE = 2;
 const WINDOW_SIZE = SCREEN_SIZE * SCALE;
 
+const ArgsError = error{
+    InvalidArgumentNumber,
+};
+
 // ***** public ***** //
 
 pub fn main() !void {
-    rl.initWindow(WINDOW_SIZE, WINDOW_SIZE, "BytePusher");
-    defer rl.closeWindow();
-
-    rl.setTargetFPS(FPS);
-
-    try bp.init();
+    try initBytePusher();
     defer bp.deinit();
 
-    try bp.loadRom("roms/Sprites.BytePusher");
+    initRaylib();
+    defer rl.closeWindow();
 
     while (!rl.windowShouldClose()) {
         bp.updateFrame();
         render();
     }
+}
+
+fn initRaylib() void {
+    if (BUILD_MODE == .Debug) {
+        rl.setTraceLogLevel(.debug);
+    } else rl.setTraceLogLevel(.warning);
+
+    rl.initWindow(WINDOW_SIZE, WINDOW_SIZE, "BytePusher");
+    rl.setTargetFPS(FPS);
+}
+
+fn initBytePusher() !void {
+    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len != 2) {
+        try help();
+        return ArgsError.InvalidArgumentNumber;
+    }
+
+    const rom_path = args[1];
+
+    try bp.init();
+    try bp.loadRom(rom_path);
+}
+
+fn help() !void {
+    const stderr = std.io.getStdErr();
+    const writer = stderr.writer();
+
+    try writer.writeAll("\x1b[1mUsage:\x1b[0m bytepusher <rom-path>\n");
 }
 
 fn render() void {

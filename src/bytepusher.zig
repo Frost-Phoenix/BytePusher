@@ -26,6 +26,11 @@ const keys: [16]rl.KeyboardKey = .{
 
 pub var frame_buffer: rl.RenderTexture2D = undefined;
 
+const RomError = error{
+    RomToBig,
+    RomReadFailed,
+};
+
 // ***** private functions ***** //
 
 fn initColorMap() [COLOR_MAP_SIZE]rl.Color {
@@ -114,7 +119,7 @@ pub fn loadRom(path: []const u8) !void {
     const rom_size = rom_stats.size;
 
     if (rom_size > MEMORY_SIZE) {
-        @panic("rom to big");
+        return RomError.RomToBig;
     }
 
     const rom = try dir.openFile(rom_name, .{});
@@ -124,7 +129,7 @@ pub fn loadRom(path: []const u8) !void {
     const byte_read = try rom.readAll(&memory);
 
     if (byte_read != rom_size) {
-        @panic("didn't read whole file");
+        return RomError.RomReadFailed;
     }
 }
 
