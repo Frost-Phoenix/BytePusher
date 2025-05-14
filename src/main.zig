@@ -19,28 +19,6 @@ const ArgsError = error{
 // ***** public ***** //
 
 pub fn main() !void {
-    try initBytePusher();
-    defer bp.deinit();
-
-    initRaylib();
-    defer rl.closeWindow();
-
-    while (!rl.windowShouldClose()) {
-        bp.updateFrame();
-        render();
-    }
-}
-
-fn initRaylib() void {
-    if (BUILD_MODE == .Debug) {
-        rl.setTraceLogLevel(.debug);
-    } else rl.setTraceLogLevel(.warning);
-
-    rl.initWindow(WINDOW_SIZE, WINDOW_SIZE, "BytePusher");
-    rl.setTargetFPS(FPS);
-}
-
-fn initBytePusher() !void {
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -54,9 +32,24 @@ fn initBytePusher() !void {
     }
 
     const rom_path = args[1];
+    try bp.loadRom(rom_path);
+
+    if (BUILD_MODE == .Debug) {
+        rl.setTraceLogLevel(.debug);
+    } else rl.setTraceLogLevel(.warning);
+
+    rl.initWindow(WINDOW_SIZE, WINDOW_SIZE, "BytePusher");
+    defer rl.closeWindow();
 
     try bp.init();
-    try bp.loadRom(rom_path);
+    defer bp.deinit();
+
+    rl.setTargetFPS(FPS);
+
+    while (!rl.windowShouldClose()) {
+        bp.updateFrame();
+        render();
+    }
 }
 
 fn help() !void {
